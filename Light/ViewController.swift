@@ -13,7 +13,7 @@ let tintColor = UIColor(red: 0.912, green: 0.425, blue: 0.029, alpha: 1.0)
 
 extension ViewController: WaveTransiting {
 
-    var visibleCells: UITableView {
+    var wave_tableView: UITableView {
         return tableView
     }
 

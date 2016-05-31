@@ -22,6 +22,7 @@ class SecondViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        view.backgroundColor = UIColor.clearColor()
         tableView.backgroundColor = tintColor
     }
 }
@@ -44,7 +45,7 @@ extension SecondViewController: UITableViewDataSource, UITableViewDelegate {
 }
 
 extension SecondViewController: WaveTransiting {
-    var visibleCells: UITableView {
+    var wave_tableView: UITableView {
         return tableView
     }
 }
