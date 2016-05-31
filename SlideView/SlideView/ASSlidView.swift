@@ -34,6 +34,14 @@ final class SlideView: UIView {
 
         backgroundColor = UIColor.whiteColor()
 
+        let skipButton = UIButton(type: .Custom)
+        skipButton.backgroundColor = UIColor.whiteColor()
+        skipButton.setTitle("跳过", forState: .Normal)
+        skipButton.frame.size = CGSize(width: 60.0, height: 60.0)
+        skipButton.setTitleColor(UIColor.orangeColor(), forState: .Normal)
+        skipButton.titleLabel?.font = UIFont.systemFontOfSize(17.0)
+        skipButton.frame.origin = CGPoint(x: ScreenWidth - 20.0 - skipButton.frame.size.width, y: 20.0)
+        skipButton.addTarget(self, action: #selector(SlideView.hide), forControlEvents: .TouchUpInside)
 
         titleTexts.append("1")
         titleTexts.append("2")
@@ -77,10 +85,20 @@ final class SlideView: UIView {
 
         addSubview(photoCollectionView)
         addSubview(pageView)
+        addSubview(skipButton)
     }
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func hide() {
+        UIView.animateWithDuration(0.35, delay: 0.0, options: .CurveEaseOut, animations: {
+            self.alpha = 0.0
+
+            }, completion: { _ in
+                self.removeFromSuperview()
+        })
     }
 
 }
@@ -112,11 +130,7 @@ extension SlideView: UICollectionViewDataSource, UICollectionViewDelegate {
 
     func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
         if currentPageIndex == 4 {
-            UIView.animateWithDuration(0.35, delay: 0.0, options: .CurveEaseOut, animations: {
-                self.alpha = 0.0
-                }, completion: { _ in
-                    self.removeFromSuperview()
-            })
+            hide()
         }
     }
 
@@ -144,14 +158,11 @@ class SlidePageControl: UIView {
 
                     if newValue != index {
                         circleIconView.pointView?.alpha = 1.0
-
-                        circleIconView.iconView?.transform = CGAffineTransformMakeScale(0.001, 0.001)
-                        circleIconView.iconView?.alpha = 0.0
+                        circleIconView.selectedPointView?.alpha = 0.0
 
                     } else {
                         circleIconView.pointView?.alpha = 0.0
-                        circleIconView.iconView?.transform = CGAffineTransformIdentity
-                        circleIconView.iconView?.alpha = 1.0
+                        circleIconView.selectedPointView?.alpha = 1.0
                     }
                 }
 
@@ -193,9 +204,8 @@ class SlidePageControl: UIView {
             circleIconViews.append(circleIconView)
 
             if index == 0 {
-                circleIconView.iconView?.alpha = 1.0
+                circleIconView.selectedPointView?.alpha = 1.0
                 circleIconView.pointView?.alpha = 0.0
-                circleIconView.iconView?.transform = CGAffineTransformIdentity
             }
 
             addSubview(circleIconView)
@@ -212,45 +222,31 @@ class SlidePageControl: UIView {
 class SlidCircleView: UIView {
 
     var pointView: UIView!
-    var iconView: UIView!
+    var selectedPointView: UIView!
 
     init(frame: CGRect, whitePoint: Bool, iconImageName: String) {
         super.init(frame: frame)
 
-        let circleViewWH: CGFloat = 8
+        let circleViewWH: CGFloat = 9
 
         pointView = UIView(frame: CGRect(x: 0, y: 0, width: circleViewWH, height: circleViewWH))
-        pointView.backgroundColor = UIColor(r: 255, g: 255, b: 255, a: 0.12)
+        pointView.backgroundColor = UIColor.clearColor()
         pointView.layer.masksToBounds = true
         pointView.layer.cornerRadius = circleViewWH/2
+        pointView.layer.borderColor = UIColor(r: 179, g: 179, b: 179, a: 1.0).CGColor
+        pointView.layer.borderWidth = 1.0
         pointView.center.y = CGRectGetMidY(bounds)
         pointView.center.x = CGRectGetMidX(bounds)
 
         addSubview(pointView)
 
-        iconView = UIView(frame: bounds)
-        if !whitePoint {
+        selectedPointView = UIView(frame: pointView.frame)
+        selectedPointView.backgroundColor = UIColor.redColor()
+        selectedPointView.layer.masksToBounds = true
+        selectedPointView.layer.cornerRadius = circleViewWH/2
+        selectedPointView.alpha = 0.0
 
-            iconView.backgroundColor = UIColor.clearColor()
-            let iconImageView = UIImageView(frame: CGRect(x: 0, y: 0, width: 18, height: 18))
-            iconImageView.backgroundColor = UIColor.clearColor()
-            iconImageView.image = UIImage(named: iconImageName)
-            iconImageView.center.y = CGRectGetMidY(bounds)
-            iconImageView.center.x = CGRectGetMidX(bounds)
-
-            iconView.addSubview(iconImageView)
-
-        } else {
-
-            iconView.backgroundColor = UIColor.whiteColor()
-            iconView.frame = pointView.frame
-            iconView.layer.masksToBounds = true
-            iconView.layer.cornerRadius = circleViewWH/2
-
-        }
-        iconView.alpha = 0.0
-        iconView.transform = CGAffineTransformMakeScale(0.0, 0.0)
-        addSubview(iconView)
+        addSubview(selectedPointView)
     }
 
     required init(coder aDecoder: NSCoder) {

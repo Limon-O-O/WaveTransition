@@ -7,14 +7,26 @@
 //
 
 import UIKit
+import WaveTransition
 
 let tintColor = UIColor(red: 0.912, green: 0.425, blue: 0.029, alpha: 1.0)
+
+extension ViewController: WaveTransiting {
+
+    var visibleCells: UITableView {
+        return tableView
+    }
+
+}
+
 
 class ViewController: UIViewController {
 
     @IBOutlet private weak var tableView: UITableView!
 
     private var dataSource = [[String: String]]()
+
+    private lazy var waveTransitionManager: WaveTransitionManager = WaveTransitionManager(source: self)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,7 +44,11 @@ class ViewController: UIViewController {
         dataSource.append(["text": "Let's cook!", "icon": "beaker"])
         dataSource.append(["text": "That's the puzzle!", "icon": "puzzle"])
         dataSource.append(["text": "Cheers", "icon": "glass"])
+    }
 
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        (segue.destinationViewController as? SecondViewController)?.waveTransitionManager = waveTransitionManager
+        navigationController?.delegate = waveTransitionManager
     }
 }
 

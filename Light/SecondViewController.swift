@@ -7,13 +7,21 @@
 //
 
 import UIKit
+import WaveTransition
 
 class SecondViewController: UIViewController {
 
     @IBOutlet private weak var tableView: UITableView!
 
+    weak var waveTransitionManager: WaveTransitionManager? {
+        didSet {
+            waveTransitionManager?.destination = self
+        }
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
+
         tableView.backgroundColor = tintColor
     }
 }
@@ -32,5 +40,11 @@ extension SecondViewController: UITableViewDataSource, UITableViewDelegate {
         cell.backgroundColor = UIColor.clearColor()
         
         return cell
+    }
+}
+
+extension SecondViewController: WaveTransiting {
+    var visibleCells: UITableView {
+        return tableView
     }
 }

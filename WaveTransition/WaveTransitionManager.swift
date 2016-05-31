@@ -8,9 +8,9 @@
 
 import UIKit
 
-protocol WaveTransiting: class {
+public protocol WaveTransiting: class {
 
-    var visibleCells: [UIView]  { get }
+    var visibleCells: UITableView  { get }
 
 }
 
@@ -26,16 +26,25 @@ enum WaveInteractiveWay {
 let ScreenWidth = UIScreen.mainScreen().bounds.width
 
 
-class WaveTransitionManager: NSObject {
+public class WaveTransitionManager: NSObject {
 
     var originalNavigationControllerDelegate: UINavigationControllerDelegate?
     var didPush: Bool = false
 
     var viewControllersInset: CGFloat = 20.0
 
-    var maxDelay: CGFloat = 1.0
+    var maxDelay: NSTimeInterval = 0.15
 
-    private var duration: NSTimeInterval = 0.35
+    private var duration: NSTimeInterval = 0.65
+    private weak var source: WaveTransiting?
+    public weak var destination: WaveTransiting?
+
+    public init<T: UIViewController where T: WaveTransiting>(source: T) {
+        self.source = source
+        super.init()
+    }
+
+    private override init() {}
 
     deinit {
         print("ProfileTransitionManager is being deinitialized")
@@ -44,18 +53,18 @@ class WaveTransitionManager: NSObject {
 
 extension WaveTransitionManager: UINavigationControllerDelegate {
 
-    func navigationController(navigationController: UINavigationController, animationControllerForOperation operation: UINavigationControllerOperation, fromViewController fromVC: UIViewController, toViewController toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    public func navigationController(navigationController: UINavigationController, animationControllerForOperation operation: UINavigationControllerOperation, fromViewController fromVC: UIViewController, toViewController toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         return self
     }
 }
 
 extension WaveTransitionManager: UIViewControllerAnimatedTransitioning {
 
-    func transitionDuration(transitionContext: UIViewControllerContextTransitioning?) -> NSTimeInterval {
-        return !didPush ? duration * 1.4 : duration
+    public func transitionDuration(transitionContext: UIViewControllerContextTransitioning?) -> NSTimeInterval {
+        return !didPush ? duration + maxDelay : duration
     }
 
-    func animateTransition(transitionContext: UIViewControllerContextTransitioning) {
+    public func animateTransition(transitionContext: UIViewControllerContextTransitioning) {
 
         if !didPush {
             pushControllerAnimateWithTransition(transitionContext)
@@ -75,37 +84,44 @@ extension WaveTransitionManager: UIViewControllerAnimatedTransitioning {
 
         let delta = viewControllersInset + ScreenWidth
 
+        let destinationViewBlackgroundColor = destination?.visibleCells.backgroundColor
+        destination?.visibleCells.backgroundColor = UIColor.clearColor()
+
+
         toViewController.view.frame = transitionContext.finalFrameForViewController(toViewController)
-        toViewController.view.transform = CGAffineTransformMakeTranslation(delta, 0)
 
         containerView.backgroundColor = fromViewController.view.backgroundColor
+        toViewController.view.backgroundColor = UIColor.clearColor()
 
         // Trigger the layout of the new cells
         containerView.layoutIfNeeded()
 
         toViewController.view.transform = CGAffineTransformMakeTranslation(1, 0)
 
-        UIView.animateWithDuration(duration, delay: 0.0, options: .CurveEaseIn, animations: {
+        UIView.animateWithDuration(duration + maxDelay, delay: 0.0, options: .CurveEaseIn, animations: {
 
             toViewController.view.transform = CGAffineTransformIdentity
 
         }, completion: {_ in
-            transitionContext.completeTransition(true)
+            self.didPush = true
 
+            self.destination?.visibleCells.backgroundColor = destinationViewBlackgroundColor
+
+            transitionContext.completeTransition(true)
         })
 
-        let fromVisibleViews = visibleCellsForViewController(fromViewController)!
-        let toVisibleViews = visibleCellsForViewController(toViewController)!
+        let fromVisibleViews = visibleCellsForViewController(source!)
+        let toVisibleViews = visibleCellsForViewController(destination!)
 
         let views = [fromVisibleViews, toVisibleViews]
 
         views.forEach {
 
-            for (index, view) in $0.enumerate() {
+            for (index, view) in $0.reverse().enumerate() {
 
                 let fromMode = $0 == fromVisibleViews
 
-                let delay = NSTimeInterval(index / $0.count)
+                let delay = NSTimeInterval(NSTimeInterval(fromVisibleViews.count - index - 1) / NSTimeInterval(fromVisibleViews.count) * maxDelay)
 
                 if !fromMode {
                     view.transform = CGAffineTransformMakeTranslation(delta, 0)
@@ -122,42 +138,102 @@ extension WaveTransitionManager: UIViewControllerAnimatedTransitioning {
                         view.alpha = 1
                     }
 
-
                 }, completion: {_ in
-
+                    
                     if fromMode {
                         view.transform = CGAffineTransformIdentity
                     }
                 })
             }
-
+            
         }
-
     }
 
     private func popControllerAnimateWithTransition(transitionContext: UIViewControllerContextTransitioning) {
+        guard let containerView = transitionContext.containerView(),
+            fromViewController = transitionContext.viewControllerForKey(UITransitionContextFromViewControllerKey),
+            toViewController = transitionContext.viewControllerForKey(UITransitionContextToViewControllerKey) else {
+                return
+        }
 
+        containerView.addSubview(toViewController.view)
+
+        let delta = -viewControllersInset - ScreenWidth
+
+        toViewController.view.frame = transitionContext.finalFrameForViewController(toViewController)
+
+        let sourceViewBlackgroundColor = source?.visibleCells.backgroundColor
+        source?.visibleCells.backgroundColor = UIColor.clearColor()
+
+        containerView.backgroundColor = fromViewController.view.backgroundColor
+        fromViewController.view.backgroundColor = UIColor.clearColor()
+        toViewController.view.backgroundColor = UIColor.clearColor()
+
+        // Trigger the layout of the new cells
+        containerView.layoutIfNeeded()
+
+        fromViewController.view.transform = CGAffineTransformMakeTranslation(1, 0)
+        toViewController.view.transform = CGAffineTransformIdentity
+
+        UIView.animateWithDuration(duration + maxDelay, delay: 0.0, options: .CurveEaseIn, animations: {
+
+            fromViewController.view.transform = CGAffineTransformMakeTranslation(0, 0)
+
+            }, completion: {_ in
+                self.didPush = false
+                self.source?.visibleCells.backgroundColor = sourceViewBlackgroundColor
+                transitionContext.completeTransition(true)
+        })
+
+        let fromVisibleViews = visibleCellsForViewController(destination!)
+        let toVisibleViews = visibleCellsForViewController(source!)
+
+        let views = [fromVisibleViews, toVisibleViews]
+
+        views.forEach {
+
+            for (index, view) in $0.reverse().enumerate() {
+
+                let fromMode = $0 == fromVisibleViews
+
+                let delay = NSTimeInterval(NSTimeInterval(fromVisibleViews.count - index - 1) / NSTimeInterval(fromVisibleViews.count) * maxDelay)
+
+                if !fromMode {
+                    view.transform = CGAffineTransformMakeTranslation(delta, 0)
+                }
+
+                UIView.animateWithDuration(duration, delay: delay, options: .CurveEaseIn, animations: {
+
+                    if fromMode {
+                        view.transform = CGAffineTransformMakeTranslation(-delta, 0)
+                        view.alpha = 0.0
+
+                    } else {
+                        view.transform = CGAffineTransformIdentity
+                        view.alpha = 1.0
+                    }
+
+                    }, completion: {_ in
+
+                        if fromMode {
+                            view.transform = CGAffineTransformIdentity
+                        }
+                })
+            }
+
+        }
     }
 
-    private func visibleCellsForViewController(viewController: UIViewController) -> [UIView]? {
-
-        return (viewController as? WaveTransiting)?.visibleCells ?? (viewController as? UITableViewController)?.tableView.wave_animatingVisibleViews
-
-//        if let cells = (viewController as? WaveTransiting)?.visibleCells {
-//            return cells
-//        } else if let visibleViews = (viewController as? UITableViewController)?.tableView.wave_animatingVisibleViews {
-//            return visibleViews
-//        }
-//
-//        return nil
+    private func visibleCellsForViewController(waveTransiting: WaveTransiting) -> [UIView] {
+        return waveTransiting.visibleCells.wave_animatingVisibleViews
     }
 
 }
 
 
-private extension UITableView {
+public extension UITableView {
 
-    var wave_animatingVisibleViews: [UIView] {
+    public var wave_animatingVisibleViews: [UIView] {
 
         var views = [UIView]()
 
@@ -183,7 +259,8 @@ private extension UITableView {
                             continue
                         }
 
-                        if let cell = cellForRowAtIndexPath(indexPath) {
+                        if let cell = cellForRowAtIndexPath(sectionIndexPath) {
+                            print(cell.textLabel?.text)
                             views.append(cell)
                         }
                     }
@@ -202,7 +279,6 @@ private extension UITableView {
         return views
 
     }
-    
 
 }
 
